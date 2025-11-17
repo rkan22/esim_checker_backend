@@ -168,6 +168,8 @@ class RenewalService:
             logger.info(f"Processing payment for order: {order.order_id}")
             
             # Create Stripe Checkout Session
+            from django.conf import settings
+            frontend_url = settings.FRONTEND_URL
             checkout_session = StripePaymentService.create_checkout_session(
                 amount=order.amount,
                 currency=order.currency,
@@ -177,8 +179,8 @@ class RenewalService:
                     'provider': order.provider,
                     'package_name': package_name or 'eSIM Bundle Renewal',
                 },
-                success_url=f'http://localhost:3000/renewal/success?session_id={{CHECKOUT_SESSION_ID}}',
-                cancel_url='http://localhost:3000/renewal/cancelled'
+                success_url=f'{frontend_url}/renewal/success?session_id={{CHECKOUT_SESSION_ID}}',
+                cancel_url=f'{frontend_url}/renewal/cancelled'
             )
             
             # Create payment transaction record

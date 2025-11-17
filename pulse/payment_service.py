@@ -52,11 +52,13 @@ class StripePaymentService:
         if currency is None:
             currency = settings.STRIPE_CURRENCY.lower()
         
+        frontend_url = settings.FRONTEND_URL
+        
         if success_url is None:
-            success_url = 'http://localhost:3000/renewal/success?session_id={CHECKOUT_SESSION_ID}'
+            success_url = f'{frontend_url}/renewal/success?session_id={{CHECKOUT_SESSION_ID}}'
         
         if cancel_url is None:
-            cancel_url = 'http://localhost:3000/renewal/cancelled'
+            cancel_url = f'{frontend_url}/renewal/cancelled'
         
         # Convert amount to cents (Stripe requires smallest currency unit)
         amount_cents = int(amount * 100)
