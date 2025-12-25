@@ -294,7 +294,7 @@ def esimcard_login() -> str:
 
 def esimcard_get_my_esims(token: str) -> List[Dict[str, Any]]:
     """
-    Fetch all purchased eSIMs from eSIMCard API
+    Fetch all purchased eSIMs from eSIMCard API with pagination support
     
     Args:
         token: Authentication token
@@ -305,26 +305,52 @@ def esimcard_get_my_esims(token: str) -> List[Dict[str, Any]]:
     Raises:
         APIError: If API request fails
     """
-    url = f"{ESIMCARD_BASE_URL}/my-esims"
     headers = {"Authorization": f"Bearer {token}"}
+    all_esims = []
+    page = 1
     
     try:
-        logger.info("Fetching eSIMs from eSIMCard API...")
-        response = requests.get(
-            url, 
-            headers=headers, 
-            timeout=REQUEST_TIMEOUT
-        )
-        response.raise_for_status()
+        logger.info("Fetching eSIMs from eSIMCard API with pagination...")
         
-        data = response.json()
+        while True:
+            url = f"{ESIMCARD_BASE_URL}/my-esims?page={page}"
+            
+            response = requests.get(
+                url, 
+                headers=headers, 
+                timeout=REQUEST_TIMEOUT
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if not data.get("status"):
+                raise APIError("Failed to fetch eSIMs from eSIMCard API")
+            
+            esims = data.get("data", [])
+            meta = data.get("meta", {})
+            
+            if not esims:
+                # No more eSIMs to fetch
+                break
+            
+            all_esims.extend(esims)
+            
+            # Get pagination info from meta
+            current_page = meta.get("currentPage", page)
+            last_page = meta.get("lastPage", current_page)
+            total = meta.get("total", len(all_esims))
+            
+            logger.info(f"Fetched page {current_page}/{last_page}: {len(esims)} eSIMs (Total so far: {len(all_esims)}/{total})")
+            
+            # Check if we've reached the last page
+            if current_page >= last_page:
+                break
+            
+            page += 1
         
-        if not data.get("status"):
-            raise APIError("Failed to fetch eSIMs from eSIMCard API")
-        
-        esims = data.get("data", [])
-        logger.info(f"Retrieved {len(esims)} eSIMs from eSIMCard")
-        return esims
+        logger.info(f"Retrieved total of {len(all_esims)} eSIMs from eSIMCard across {page} page(s)")
+        return all_esims
         
     except requests.exceptions.Timeout:
         logger.error("eSIMCard fetch request timed out")
@@ -434,7 +460,7 @@ def esimcard_get_usage(token: str, esim_id: str) -> Dict[str, Any]:
 
 def esimcard_get_my_bundles(token: str) -> List[Dict[str, Any]]:
     """
-    Get list of purchased bundles from eSIMCard API
+    Get list of purchased bundles from eSIMCard API with pagination support
     
     Args:
         token: Authentication token
@@ -445,26 +471,51 @@ def esimcard_get_my_bundles(token: str) -> List[Dict[str, Any]]:
     Raises:
         APIError: If API request fails
     """
-    url = f"{ESIMCARD_BASE_URL}/my-bundles"
     headers = {"Authorization": f"Bearer {token}"}
+    all_bundles = []
+    page = 1
     
     try:
-        logger.info("Fetching bundles from eSIMCard API...")
-        response = requests.get(
-            url, 
-            headers=headers, 
-            timeout=REQUEST_TIMEOUT
-        )
-        response.raise_for_status()
+        logger.info("Fetching bundles from eSIMCard API with pagination...")
         
-        data = response.json()
+        while True:
+            url = f"{ESIMCARD_BASE_URL}/my-bundles?page={page}"
+            
+            response = requests.get(
+                url, 
+                headers=headers, 
+                timeout=REQUEST_TIMEOUT
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if not data.get("status"):
+                raise APIError("Failed to fetch bundles from eSIMCard API")
+            
+            bundles = data.get("data", [])
+            meta = data.get("meta", {})
+            
+            if not bundles:
+                # No more bundles to fetch
+                break
+            
+            all_bundles.extend(bundles)
+            
+            # Get pagination info from meta
+            current_page = meta.get("currentPage", page)
+            last_page = meta.get("lastPage", current_page)
+            
+            logger.info(f"Fetched page {current_page}/{last_page}: {len(bundles)} bundles (Total so far: {len(all_bundles)})")
+            
+            # Check if we've reached the last page
+            if current_page >= last_page:
+                break
+            
+            page += 1
         
-        if not data.get("status"):
-            raise APIError("Failed to fetch bundles from eSIMCard API")
-        
-        bundles = data.get("data", [])
-        logger.info(f"Retrieved {len(bundles)} bundles from eSIMCard")
-        return bundles
+        logger.info(f"Retrieved total of {len(all_bundles)} bundles from eSIMCard across {page} page(s)")
+        return all_bundles
         
     except requests.exceptions.Timeout:
         logger.error("eSIMCard bundles fetch timed out")
