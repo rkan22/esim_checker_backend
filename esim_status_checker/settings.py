@@ -27,10 +27,19 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-or54b*up@p9nhcogusnh*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,esim-status-checker-backend.onrender.com').split(',')
+# In development, allow all hosts to avoid port issues
+if DEBUG:
+    ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1', '0.0.0.0']
+else:
+    ALLOWED_HOSTS = [
+        host.strip() for host in config(
+            'ALLOWED_HOSTS', 
+            default='esim-status-checker-backend.onrender.com'
+        ).split(',')
+    ]
 
 # Frontend URL for Stripe redirects
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000,chekmysim.com,https://checkmysim.com')
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
 # Application definition
 
@@ -60,10 +69,12 @@ MIDDLEWARE = [
 
 # CORS settings
 # Allow requests from frontend (both local and deployed)
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://127.0.0.1:3000,https://esim-checker-frontend.vercel.app,https://checkmysim.com,checkmysim.com'
-).split(',')
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() for origin in config(
+        'CORS_ALLOWED_ORIGINS',
+        default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,https://esim-checker-frontend.vercel.app,https://checkmysim.com,http://checkmysim.com'
+    ).split(',')
+]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
@@ -77,6 +88,34 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
+# Additional CORS settings for development
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=DEBUG, cast=bool)
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://localhost:\d+$",
+    r"^http://127\.0\.0\.1:\d+$",
+]
+
+# CSRF Settings for cross-origin requests
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'https://esim-checker-frontend.vercel.app',
+    'https://checkmysim.com',
+    'http://checkmysim.com',
+]
+
+# In development, be more lenient with CSRF
+if DEBUG:
+    CSRF_COOKIE_SECURE = False
+    CSRF_COOKIE_HTTPONLY = False
+    SESSION_COOKIE_SECURE = False
+else:
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SECURE = True
 
 ROOT_URLCONF = "esim_status_checker.urls"
 

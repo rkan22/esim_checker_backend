@@ -7,20 +7,27 @@ from typing import Optional, Dict, Tuple
 from datetime import datetime, timedelta
 from django.utils import timezone
 
+logger = logging.getLogger(__name__)
+
 # Import the enhanced script functions
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Try to use optimized version, fall back to original
+try:
+    from script_optimized import try_fetch_from_all_apis_parallel as try_fetch_from_all_apis
+    logger.info("Using optimized parallel API fetching")
+except ImportError:
+    from script_enhanced import try_fetch_from_all_apis
+    logger.info("Using standard API fetching")
+
 from script_enhanced import (
-    try_fetch_from_all_apis,
     APIProvider,
     OrderNotFoundError,
     APIError,
     AuthenticationError
 )
-
-logger = logging.getLogger(__name__)
 
 
 class ESIMService:
