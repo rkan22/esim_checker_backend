@@ -139,8 +139,10 @@ class ESIMService:
         
         # ==== PHASE 2: Merge eSIMCard data (can override) ====
         if esimcard_data:
-            sim_data = esimcard_data.get('sim', {})
-            assigned_packages = esimcard_data.get('assigned_packages', [])
+            # NEW OPTIMIZED FORMAT: Direct ICCID lookup returns complete data
+            sim_data = esimcard_data.get('esim', {})  # Changed from 'sim' to 'esim'
+            in_use_packages = esimcard_data.get('packages', [])  # Changed from 'assigned_packages' to 'packages'
+            overall_usage = esimcard_data.get('usage', {})
             
             if merged['order_sim_id'] == 'N/A':
                 merged['order_sim_id'] = str(sim_data.get('id', merged['order_sim_id']))
@@ -171,8 +173,9 @@ class ESIMService:
             if sim_data.get('apn') and merged['apn'] == 'N/A':
                 merged['apn'] = sim_data.get('apn')
             
-            if assigned_packages:
-                package = assigned_packages[0]
+            # Use in_use_packages (active packages) instead of assigned_packages
+            if in_use_packages:
+                package = in_use_packages[0]
                 
                 if package.get('initial_data_quantity'):
                     capacity = package.get('initial_data_quantity')
@@ -193,6 +196,23 @@ class ESIMService:
                         consumed = float(initial_data) - float(remaining_data)
                         merged['data_consumed'] = f"{consumed:.2f} {data_unit}"
                         merged['data_remaining'] = f"{remaining_data} {data_unit}"
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Also use overall_usage if available
+            elif overall_usage:
+                initial_data = overall_usage.get('initial_data_quantity', 0)
+                remaining_data = overall_usage.get('rem_data_quantity', 0)
+                data_unit = overall_usage.get('rem_data_unit', 'GB')
+                
+                if initial_data:
+                    merged['data_capacity'] = f"{initial_data} {data_unit}"
+                if remaining_data is not None:
+                    merged['data_remaining'] = f"{remaining_data} {data_unit}"
+                if initial_data and remaining_data is not None:
+                    try:
+                        consumed = float(initial_data) - float(remaining_data)
+                        merged['data_consumed'] = f"{consumed:.2f} {data_unit}"
                     except (ValueError, TypeError):
                         pass
         

@@ -365,6 +365,62 @@ def esimcard_get_my_esims(token: str) -> List[Dict[str, Any]]:
         raise APIError(f"Failed to fetch eSIMs: {e}")
 
 
+def esimcard_get_esim_by_iccid(token: str, iccid: str) -> Optional[Dict[str, Any]]:
+    """
+    OPTIMIZED: Directly fetch eSIM by ICCID (no pagination needed!)
+    
+    Args:
+        token: Authentication token
+        iccid: ICCID to search for
+        
+    Returns:
+        Complete eSIM data including packages, usage, and coverage, or None if not found
+        
+    Raises:
+        APIError: If API request fails
+    """
+    url = f"{ESIMCARD_BASE_URL}/my-esims/{iccid}"
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    try:
+        logger.info(f"🚀 Direct lookup for ICCID {iccid} in eSIMCard...")
+        response = requests.get(
+            url, 
+            headers=headers, 
+            timeout=REQUEST_TIMEOUT
+        )
+        
+        # If 404, eSIM not found
+        if response.status_code == 404:
+            logger.info(f"❌ ICCID {iccid} not found in eSIMCard")
+            return None
+            
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        if not data.get("status"):
+            logger.warning(f"API returned status=false for {iccid}")
+            return None
+        
+        logger.info(f"✅ Found ICCID {iccid} in eSIMCard!")
+        return data.get("data", {})
+        
+    except requests.exceptions.Timeout:
+        logger.error("eSIMCard direct lookup timed out")
+        raise APIError("Request timed out while fetching eSIM by ICCID")
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            return None
+        logger.error(f"HTTP error while fetching eSIMCard by ICCID: {e}")
+        if e.response.status_code == 401:
+            raise AuthenticationError("eSIMCard authentication token expired or invalid")
+        raise APIError(f"HTTP error occurred: {e}")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching eSIMCard by ICCID: {e}")
+        raise APIError(f"Failed to fetch eSIM by ICCID: {e}")
+
+
 def esimcard_get_esim_details(token: str, esim_id: str) -> Dict[str, Any]:
     """
     Get detailed information about a specific eSIM from eSIMCard API
